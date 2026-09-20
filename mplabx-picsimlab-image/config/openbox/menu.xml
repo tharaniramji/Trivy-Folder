@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+  <menu id="root-menu" label="Openbox">
+    <item label="Terminal">
+      <action name="Execute"><execute>lxterminal</execute></action>
+    </item>
+    <item label="MPLAB X IDE">
+      <action name="Execute"><execute>mplab_ide</execute></action>
+    </item>
+    <item label="PICSimLab">
+      <action name="Execute"><execute>picsimlab</execute></action>
+    </item>
+  </menu>
+</openbox_menu>

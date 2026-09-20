@@ -1,0 +1,22 @@
+# Keep image build context clean
+.git
+.gitignore
+*.md
+*.log
+node_modules
+__pycache__
+*.pyc
+.DS_Store
+
+# Don't include test files
+tests/
+docs/
+
+# No large local files are needed (MPLAB X comes from the mplabx image,
+# PICSimLab is downloaded at build time)
+*.bin
+*.elf
+*.deb
+*.zip
+build/
+venv/
