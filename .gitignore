@@ -1,0 +1,12 @@
+# Security scan reports
+*.json
+*.txt
+trivy-report.*
+
+# Trunk linter directory
+.trunk/
+
+# OS/Editor generated files
+.DS_Store
+Thumbs.db
+.vscode/
