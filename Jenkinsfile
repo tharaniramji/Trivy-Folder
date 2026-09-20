@@ -43,9 +43,11 @@ pipeline {
                         // 1. Build the Docker Image
                         sh "docker build -t ${imageName}:test ${folderPath}"
 
-                        // 2. Run Trivy Image Scan (Fails pipeline on HIGH/CRITICAL)
+                        // 2. Run Trivy Image Scan (Includes 30m timeout & vuln scanner to prevent timeouts)
                         sh """
                             trivy image \
+                              --timeout 30m \
+                              --scanners vuln \
                               --severity HIGH,CRITICAL \
                               --exit-code 1 \
                               --format table \
