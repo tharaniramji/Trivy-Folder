@@ -11,6 +11,7 @@ pipeline {
                     // Scans all folders (e.g., config, scripts, dockerfiles) for secrets & misconfigurations
                     sh '''
                         trivy fs \
+                          --timeout 30m \
                           --severity HIGH,CRITICAL \
                           --exit-code 1 \
                           --format table \
