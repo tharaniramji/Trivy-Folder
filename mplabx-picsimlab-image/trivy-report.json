@@ -3,8 +3,8 @@
   "Trivy": {
     "Version": "0.71.2"
   },
-  "ReportID": "01a0c3fc-c56b-7786-b5cb-7bf3934d9a8a",
-  "CreatedAt": "2026-09-21T20:41:57.867495919+08:00",
+  "ReportID": "01a0c405-adf9-7a0a-89ce-393ea9bfeb9e",
+  "CreatedAt": "2026-09-21T20:51:41.689660122+08:00",
   "ArtifactID": "sha256:82dabee87e7a3e4a67e624eb84d425c83cb78984cdb3e1f03eae54448de25d38",
   "ArtifactName": "mplabpicsim:latest",
   "ArtifactType": "container_image",
