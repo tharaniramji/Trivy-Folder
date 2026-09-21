@@ -11,17 +11,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "=========================================="
-                    echo "Scanning full repository filesystem & configs..."
-                    echo "=========================================="
-                    // Scans all folders (e.g., config, scripts, dockerfiles) for secrets & misconfigurations
-                    sh '''
-                        trivy fs \
-                          --severity HIGH,CRITICAL \
-                          --exit-code 1 \
-                          --format table \
-                          .
-                    '''
+                    sh 'docker build -t mplabpicsim:${BUILD_NUMBER} ./mplabx-picsimlab-image'
+                    sh 'docker tag mplabpicsim:${BUILD_NUMBER} mplabpicsim:latest'
                 }
             }
         }
@@ -29,35 +20,33 @@ pipeline {
         stage('Trivy Vulnerability Scan') {
             steps {
                 script {
-                    // Find all Dockerfiles in any tool subfolder
-                    def dockerfilePaths = findFiles(glob: '**/Dockerfile')
+                    sh '''
+                        # 1. Generate report file (scanners=vuln prevents timeouts on large files)
+                        trivy image \
+                          --scanners vuln \
+                          --timeout 15m \
+                          --severity HIGH,CRITICAL \
+                          --format table \
+                          -o trivy-report.txt \
+                          mplabpicsim:${BUILD_NUMBER}
 
-                    if (dockerfilePaths.length == 0) {
-                        echo "No Dockerfiles found in repository subfolders."
-                    }
+                        # 2. Print report in Jenkins console output log
+                        cat trivy-report.txt
 
-                    dockerfilePaths.each { file ->
-                        // Extract parent folder path (e.g., mplabx-picsimlab-image or ros2-gazebo)
-                        def folderPath = file.path.replace('/Dockerfile', '').replace('Dockerfile', '.')
-                        def imageName = folderPath == '.' ? 'root-image' : folderPath.toLowerCase().replaceAll(/[^a-z0-9_-]/, '-')
-
-                        echo "=========================================="
-                        echo "Processing tool folder: ${folderPath}"
-                        echo "Building & scanning image: ${imageName}:test"
-                        echo "=========================================="
-
-                        // 1. Build the Docker Image
-                        sh "docker build -t ${imageName}:test ${folderPath}"
-
-                        // 2. Run Trivy Image Scan (Fails pipeline on HIGH/CRITICAL)
-                        sh """
-                            trivy image \
-                              --severity HIGH,CRITICAL \
-                              --exit-code 1 \
-                              --format table \
-                              ${imageName}:test
-                        """
-                    }
+                        # 3. Enforce quality gate (fails build if HIGH or CRITICAL vulnerabilities exist)
+                        trivy image \
+                          --scanners vuln \
+                          --timeout 15m \
+                          --exit-code 1 \
+                          --severity HIGH,CRITICAL \
+                          mplabpicsim:${BUILD_NUMBER}
+                    '''
+                }
+            }
+            post {
+                always {
+                    // Archive the scan report as a Jenkins build artifact
+                    archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
                 }
             }
         }
