@@ -2,7 +2,13 @@ pipeline {
     agent any
 
     stages {
-        stage('Trivy Repository Filesystem Scan') {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
             steps {
                 script {
                     echo "=========================================="
@@ -11,7 +17,6 @@ pipeline {
                     // Scans all folders (e.g., config, scripts, dockerfiles) for secrets & misconfigurations
                     sh '''
                         trivy fs \
-                          --timeout 30m \
                           --severity HIGH,CRITICAL \
                           --exit-code 1 \
                           --format table \
@@ -21,7 +26,7 @@ pipeline {
             }
         }
 
-        stage('Discover & Scan Docker Images') {
+        stage('Trivy Vulnerability Scan') {
             steps {
                 script {
                     // Find all Dockerfiles in any tool subfolder
@@ -44,11 +49,9 @@ pipeline {
                         // 1. Build the Docker Image
                         sh "docker build -t ${imageName}:test ${folderPath}"
 
-                        // 2. Run Trivy Image Scan (Includes 30m timeout & vuln scanner to prevent timeouts)
+                        // 2. Run Trivy Image Scan (Fails pipeline on HIGH/CRITICAL)
                         sh """
                             trivy image \
-                              --timeout 30m \
-                              --scanners vuln \
                               --severity HIGH,CRITICAL \
                               --exit-code 1 \
                               --format table \
