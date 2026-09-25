@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    triggers {
+        // Automatically triggers build when changes are pushed via GitHub Webhook
+        pollSCM('')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -8,45 +13,55 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Find & Build All Images') {
             steps {
                 script {
-                    sh 'docker build -t mplabpicsim:${BUILD_NUMBER} ./mplabx-picsimlab-image'
-                    sh 'docker tag mplabpicsim:${BUILD_NUMBER} mplabpicsim:latest'
-                }
-            }
-        }
+                    // Find all directories that contain a Dockerfile
+                    def dockerDirs = sh(
+                        script: 'find . -mindepth 2 -maxdepth 2 -name Dockerfile -exec dirname {} \\; | sed "s|^\\./||"',
+                        returnStdout: true
+                    ).trim().split('\n').findAll { it }
 
-        stage('Trivy Vulnerability Scan') {
-            steps {
-                script {
-                    sh '''
-                        # 1. Generate report file (scanners=vuln prevents timeouts on large files)
-                        trivy image \
-                          --scanners vuln \
-                          --timeout 15m \
-                          --severity HIGH,CRITICAL \
-                          --format table \
-                          -o trivy-report.txt \
-                          mplabpicsim:${BUILD_NUMBER}
+                    if (dockerDirs.size() == 0) {
+                        echo "No subdirectories with Dockerfiles found!"
+                        return
+                    }
 
-                        # 2. Print report in Jenkins console output log
-                        cat trivy-report.txt
+                    for (dir in dockerDirs) {
+                        // Generate a clean image name from directory name
+                        def imageName = dir.toLowerCase().replaceAll("[^a-z0-9_-]", "")
 
-                        # 3. Enforce quality gate (fails build if HIGH or CRITICAL vulnerabilities exist)
-                        trivy image \
-                          --scanners vuln \
-                          --timeout 15m \
-                          --exit-code 0 \
-                          --severity HIGH,CRITICAL \
-                          mplabpicsim:${BUILD_NUMBER}
-                    '''
+                        stage("Process: ${dir}") {
+                            echo "=== Building Image: ${imageName} from ./${dir} ==="
+                            
+                            // Build and Tag Docker Image
+                            sh "docker build -t ${imageName}:${BUILD_NUMBER} ./${dir}"
+                            sh "docker tag ${imageName}:${BUILD_NUMBER} ${imageName}:latest"
+
+                            echo "=== Scanning Image: ${imageName}:${BUILD_NUMBER} ==="
+                            
+                            // Run Trivy Scan with Quality Gate (--exit-code 1)
+                            sh """
+                                trivy image \\
+                                  --scanners vuln \\
+                                  --timeout 15m \\
+                                  --severity HIGH,CRITICAL \\
+                                  --format table \\
+                                  --output trivy-report-${imageName}.txt \\
+                                  --exit-code 1 \\
+                                  ${imageName}:${BUILD_NUMBER}
+                            """
+                        }
+                    }
                 }
             }
             post {
                 always {
-                    // Archive the scan report as a Jenkins build artifact
-                    archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
+                    // Print all reports to Jenkins log console
+                    sh 'cat trivy-report-*.txt || true'
+
+                    // Archive all generated scan reports as build artifacts
+                    archiveArtifacts artifacts: 'trivy-report-*.txt', allowEmptyArchive: true
                 }
             }
         }
