@@ -60,21 +60,13 @@ pipeline {
                                   ${imageName}:${BUILD_NUMBER}
                             """
 
-<<<<<<< HEAD
                             // 2. Generate HTML Report using downloaded template
-=======
-                            // 2. Generate HTML Report
->>>>>>> 866974db125dd67a41c5a5b7b1ef9e43c7a88175
                             sh """
                                 trivy image \\
                                   --cache-dir ${TRIVY_CACHE_DIR} \\
                                   --timeout 30m \\
                                   --format template \\
-<<<<<<< HEAD
                                   --template "@html.tpl" \\
-=======
-                                  --template "@contrib/html.tpl" \\
->>>>>>> 866974db125dd67a41c5a5b7b1ef9e43c7a88175
                                   --output ${WORKSPACE}/reports/${imageName}/trivy-image.html \\
                                   ${imageName}:${BUILD_NUMBER}
                             """
