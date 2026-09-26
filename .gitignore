@@ -11,4 +11,7 @@ trivy-report.*
 Thumbs.db
 .vscode/*.tar
 *.tar
+<<<<<<< HEAD
 result.html
+=======
+>>>>>>> 866974db125dd67a41c5a5b7b1ef9e43c7a88175
