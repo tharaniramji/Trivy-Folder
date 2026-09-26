@@ -10,3 +10,5 @@ trivy-report.*
 .DS_Store
 Thumbs.db
 .vscode/*.tar
+*.tar
+result.html
