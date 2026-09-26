@@ -1,0 +1,9 @@
+panel_position = bottom center horizontal
+panel_size = 100% 30
+panel_margin = 0 0
+panel_background_id = 0
+taskbar_mode = single_desktop
+taskbar_name = 1
+task_icon = 1
+task_text = 1
+task_maximum_size = 200 30
