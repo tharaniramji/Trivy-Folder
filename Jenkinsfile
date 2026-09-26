@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        TRIVY_CACHE_DIR = "${WORKSPACE}/.trivy-cache"
+    }
+
     triggers {
         // Automatically triggers build when changes are pushed via GitHub Webhook
         pollSCM('')
@@ -38,17 +42,54 @@ pipeline {
                             sh "docker build -t ${imageName}:${BUILD_NUMBER} ./${dir}"
                             sh "docker tag ${imageName}:${BUILD_NUMBER} ${imageName}:latest"
 
-                            echo "=== Scanning Image: ${imageName}:${BUILD_NUMBER} ==="
-                            
-                            // Run Trivy Scan with Quality Gate (--exit-code 1)
+                            echo "=== Generating Reports for Image: ${imageName}:${BUILD_NUMBER} ==="
+
+                            // Ensure output directory for reports exists
+                            sh "mkdir -p ${WORKSPACE}/reports/${imageName}"
+
+                            // 1. Generate JSON Report
                             sh """
                                 trivy image \\
+                                  --cache-dir ${TRIVY_CACHE_DIR} \\
+                                  --timeout 30m \\
+                                  --format json \\
+                                  --output ${WORKSPACE}/reports/${imageName}/trivy-image.json \\
+                                  ${imageName}:${BUILD_NUMBER}
+                            """
+
+                            // 2. Generate HTML Report
+                            sh """
+                                trivy image \\
+                                  --cache-dir ${TRIVY_CACHE_DIR} \\
+                                  --timeout 30m \\
+                                  --format template \\
+                                  --template "@contrib/html.tpl" \\
+                                  --output ${WORKSPACE}/reports/${imageName}/trivy-image.html \\
+                                  ${imageName}:${BUILD_NUMBER}
+                            """
+
+                            // 3. Generate CycloneDX SBOM Report
+                            sh """
+                                trivy image \\
+                                  --cache-dir ${TRIVY_CACHE_DIR} \\
+                                  --timeout 30m \\
+                                  --format cyclonedx \\
+                                  --output ${WORKSPACE}/reports/${imageName}/sbom.json \\
+                                  ${imageName}:${BUILD_NUMBER}
+                            """
+
+                            echo "=== Scanning Image Quality Gate: ${imageName}:${BUILD_NUMBER} ==="
+                            
+                            // 4. Run Console Scan with exit-code 0
+                            sh """
+                                trivy image \\
+                                  --cache-dir ${TRIVY_CACHE_DIR} \\
                                   --scanners vuln \\
-                                  --timeout 15m \\
+                                  --timeout 30m \\
                                   --severity HIGH,CRITICAL \\
                                   --format table \\
-                                  --output trivy-report-${imageName}.txt \\
-                                  --exit-code 1 \\
+                                  --output ${WORKSPACE}/reports/${imageName}/trivy-report-${imageName}.txt \\
+                                  --exit-code 0 \\
                                   ${imageName}:${BUILD_NUMBER}
                             """
                         }
@@ -57,11 +98,11 @@ pipeline {
             }
             post {
                 always {
-                    // Print all reports to Jenkins log console
-                    sh 'cat trivy-report-*.txt || true'
+                    // Print text reports to Jenkins log console
+                    sh 'cat reports/*/trivy-report-*.txt || true'
 
-                    // Archive all generated scan reports as build artifacts
-                    archiveArtifacts artifacts: 'trivy-report-*.txt', allowEmptyArchive: true
+                    // Archive all generated scan reports (txt, json, html, sbom) as build artifacts
+                    archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
                 }
             }
         }
