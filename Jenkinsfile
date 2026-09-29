@@ -11,6 +11,12 @@ pipeline {
     }
 
     stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs(deleteDirs: true, notFailBuild: true)
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -106,6 +112,9 @@ pipeline {
 
                     // Archive all generated scan reports (txt, json, html, sbom) as build artifacts
                     archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
+
+                    // Clean workspace after archiving to prevent stale files in future builds
+                    cleanWs(deleteDirs: true, notFailBuild: true)
                 }
             }
         }
