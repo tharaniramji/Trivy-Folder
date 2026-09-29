@@ -3,6 +3,9 @@ pipeline {
 
     environment {
         TRIVY_CACHE_DIR = "${WORKSPACE}/.trivy-cache"
+        // Force UTF-8 encoding globally for all shell executions
+        LANG            = 'C.UTF-8'
+        LC_ALL          = 'C.UTF-8'
     }
 
     triggers {
@@ -89,10 +92,11 @@ pipeline {
 
                             echo "=== Scanning Image Quality Gate: ${imageName}:${BUILD_NUMBER} ==="
                             
-                            // 4. Run Console Scan with exit-code 0 and explicit UTF-8 encoding
+                            // 4. Generate Clean Text Report (NO_COLOR avoids ASCII box corruption)
                             sh """
                                 export LC_ALL=C.UTF-8
                                 export LANG=C.UTF-8
+                                export TRIVY_NO_COLOR=true
                                 trivy image \\
                                   --cache-dir ${TRIVY_CACHE_DIR} \\
                                   --scanners vuln \\
