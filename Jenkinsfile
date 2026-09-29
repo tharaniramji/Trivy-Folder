@@ -89,8 +89,10 @@ pipeline {
 
                             echo "=== Scanning Image Quality Gate: ${imageName}:${BUILD_NUMBER} ==="
                             
-                            // 4. Run Console Scan with exit-code 0
+                            // 4. Run Console Scan with exit-code 0 and explicit UTF-8 encoding
                             sh """
+                                export LC_ALL=C.UTF-8
+                                export LANG=C.UTF-8
                                 trivy image \\
                                   --cache-dir ${TRIVY_CACHE_DIR} \\
                                   --scanners vuln \\
